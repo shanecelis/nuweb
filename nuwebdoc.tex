@@ -1,0 +1,822 @@
+\newcommand{\NWtarget}[2]{#2}
+\newcommand{\NWlink}[2]{#2}
+\newcommand{\NWtxtMacroDefBy}{Fragment defined by}
+\newcommand{\NWtxtMacroRefIn}{Fragment referenced in}
+\newcommand{\NWtxtMacroNoRef}{Fragment never referenced}
+\newcommand{\NWtxtDefBy}{Defined by}
+\newcommand{\NWtxtRefIn}{Referenced in}
+\newcommand{\NWtxtNoRef}{Not referenced}
+\newcommand{\NWtxtFileDefBy}{File defined by}
+\newcommand{\NWtxtIdentsUsed}{Uses:}
+\newcommand{\NWtxtIdentsNotUsed}{Never used}
+\newcommand{\NWtxtIdentsDefed}{Defines:}
+\newcommand{\NWsep}{${\diamond}$}
+\newcommand{\NWnotglobal}{(not defined globally)}
+\newcommand{\NWuseHyperlinks}{}
+%
+% Copyright (c) 1996, Preston Briggs
+% All rights reserved.
+%
+% Redistribution and use in source and binary forms, with or without
+% modification, are permitted provided that the following conditions
+% are met:
+%
+% Redistributions of source code must retain the above copyright notice,
+% this list of conditions and the following disclaimer.
+%
+% Redistributions in binary form must reproduce the above copyright notice,
+% this list of conditions and the following disclaimer in the documentation
+% and/or other materials provided with the distribution.
+%
+% Neither name of the product nor the names of its contributors may
+% be used to endorse or promote products derived from this software without
+% specific prior written permission.
+%
+% THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+% ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+% LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+% FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE AUTHORS
+% OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+% EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+% PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+% PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+% OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+% NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+% SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+%
+
+% Notes:
+% Update on 2011-12-16 from Keith Harwood.
+% -- @s in scrap supresses indent of following fragment expansion
+% -- @<Name@> in text is expanded
+% Update on 2011-04-20 from Keith Harwood.
+% -- @t provide fragment title in output 
+% Changes from 2010-03-11 in the Sourceforge revision history. -- sjw
+% Updates on 2004-02-23 from Gregor Goldbach
+% <glauschwuffel@users.sourceforge.net>
+% -- new command line option -r which will make nuweb typeset each
+% NWtarget and NWlink instance with \LaTeX-commands from the hyperref
+% package. This gives clickable scrap numbers which is very useful
+% when viewing the document on-line.
+
+% Updates on 2004-02-13 from Gregor Goldbach
+% <glauschwuffel@users.sourceforge.net>
+% -- new command line option -l which will make nuweb typeset scraps
+%    with the help of LaTeX's listings packages instead or pure
+%    verbatim.
+% -- man page corrections and additions.
+
+% Updates on 2003-04-24 from Keith Harwood <Keith.Harwood@vitalmis.com>
+% -- sectioning commands (@s and global-plus-sign in scrap names)
+% -- @x..@x labelling
+% -- @f current file
+% -- @\# suppress indent
+
+% This file has been changed by Javier Goizueta <jgoizueta@jazzfree.es>
+% on 2001-02-15.
+% These are the changes:
+% LANG  -- Introduction of \NW macros to substitue language dependent text
+% DIAM  -- Introduction of \NWsep instead of the \diamond separator
+% HYPER -- Introduction of hyper-references
+% NAME  -- LaTeX formatting of macro names in HTML output
+% ADJ   -- Adjust of the spacing between < and a fragment name
+% TEMPN -- Fix of the use of tempnam
+% LINE  -- Synchronizing #lines when @% is used
+% MAC   -- definition of the macros used by LANG,DIAM,HYPER
+% CHAR  -- Introduce @r to change the nuweb meta character (@)
+% TIE   -- Replacement of ~ by "\nobreak\ "
+% SCRAPs-- Elimination of s
+% DNGL  -- Correction: option -d was not working and was misdocumented
+%  --after the CHAR modifications, to be able to specify non-ascii characters
+%    for the scape character, the program must be compiled with the -K
+%    option in Borland compilers or the -funsigned-char in GNU's gcc
+%    to treat char as an unsigned value when converted to int.
+%    To make the program independent of those options, either char
+%    should be changed to unsigned char (bad solution, since unsigned
+%    char should be used for numerical purposes) or attention should
+%    be payed to all char-int conversions. (including comparisons)
+
+% --2002-01-15: the TILDE modificiation is necessary because some ties
+%   have been introduced in version 0.93 in troublesome places when
+%   the babel package is used with the spanish.ldf option (which makes
+%   ~ an active character).
+
+% --2002-01-15: an ``s'' was being added to the NWtxtDefBy and
+%   NWtxtDefBy messages when followed by more than one reference.
+
+\documentclass[a4paper]{report}
+\newif\ifshowcode
+\showcodetrue
+
+\usepackage{latexsym}
+%\usepackage{html}
+
+\usepackage{listings}
+
+\usepackage{color}
+\definecolor{linkcolor}{rgb}{0, 0, 0.7}
+
+\usepackage[%
+backref,%
+raiselinks,%
+pdfhighlight=/O,%
+pagebackref,%
+hyperfigures,%
+breaklinks,%
+colorlinks,%
+pdfpagemode=None,%
+pdfstartview=FitBH,%
+linkcolor={linkcolor},%
+anchorcolor={linkcolor},%
+citecolor={linkcolor},%
+filecolor={linkcolor},%
+menucolor={linkcolor},%
+pagecolor={linkcolor},%
+urlcolor={linkcolor}%
+]{hyperref}
+
+\setlength{\oddsidemargin}{0in}
+\setlength{\evensidemargin}{0in}
+\setlength{\topmargin}{0in}
+\addtolength{\topmargin}{-\headheight}
+\addtolength{\topmargin}{-\headsep}
+\setlength{\textheight}{8.9in}
+\setlength{\textwidth}{6.5in}
+\setlength{\marginparwidth}{0.5in}
+
+\title{Nuweb Version 1.58 \\ A Simple Literate Programming Tool}
+\date{}
+\author{Preston Briggs\thanks{This work has been supported by ARPA,
+through ONR grant N00014-91-J-1989.}
+\\ {\sl preston@tera.com}
+\\ HTML scrap generator by John D. Ramsdell
+\\ {\sl ramsdell@mitre.org}
+\\ Scrap formatting by Marc W. Mengel
+\\ {\sl mengel@fnal.gov}
+\\ Continuing maintenance by Simon Wright
+\\ {\sl simon@pushface.org}
+\\ and Keith Harwood
+\\ {\sl Keith.Harwood@vitalmis.com}}
+
+\begin{document}
+\pagenumbering{roman}
+\maketitle
+\tableofcontents
+
+\chapter{Introduction}
+\pagenumbering{arabic}
+
+In 1984, Knuth introduced the idea of {\em literate programming\/} and
+described a pair of tools to support the practise~\cite{Knuth:CJ-27-2-97}.
+His approach was to combine Pascal code with \TeX\ documentation to
+produce a new language, \verb|WEB|, that offered programmers a superior
+approach to programming. He wrote several programs in \verb|WEB|,
+including \verb|weave| and \verb|tangle|, the programs used to support
+literate programming.
+The idea was that a programmer wrote one document, the web file, that
+combined documentation (written in \TeX~\cite{Knuth:ct-a}) with code
+(written in Pascal).
+
+Running \verb|tangle| on the web file would produce a complete
+Pascal program, ready for compilation by an ordinary Pascal compiler.
+The primary function of \verb|tangle| is to allow the programmer to
+present elements of the program in any desired order, regardless of
+the restrictions imposed by the programming language. Thus, the
+programmer is free to present his program in a top-down fashion,
+bottom-up fashion, or whatever seems best in terms of promoting
+understanding and maintenance.
+
+Running \verb|weave| on the web file would produce a \TeX\ file, ready
+to be processed by \TeX\@. The resulting document included a variety of
+automatically generated indices and cross-references that made it much
+easier to navigate the code. Additionally, all of the code sections
+were automatically prettyprinted, resulting in a quite impressive
+document.
+
+Knuth also wrote the programs for \TeX\ and {\small\sf METAFONT}
+entirely in \verb|WEB|, eventually publishing them in book
+form~\cite{Knuth:ct-b,Knuth:ct-d}. These are probably the
+largest programs ever published in a readable form.
+
+Inspired by Knuth's example, many people have experimented with
+\verb|WEB|\@. Some people have even built web-like tools for their
+own favorite combinations of programming language and typesetting
+language. For example, \verb|CWEB|, Knuth's current system of choice,
+works with a combination of C (or C++) and \TeX~\cite{Levy:TB8-1-12}.
+Another system, FunnelWeb, is independent of any programming language
+and only mildly dependent on \TeX~\cite{Williams:FUM92}. Inspired by the
+versatility of FunnelWeb and by the daunting size of its
+documentation, I decided to write my own, very simple, tool for
+literate programming.%
+\footnote{There is another system similar to
+mine, written by Norman Ramsey, called {\em noweb}~\cite{Ramsey:LPT92}. It
+perhaps suffers from being overly Unix-dependent and requiring several
+programs to use. On the other hand, its command syntax is very nice.
+In any case, nuweb certainly owes its name and a number of features to
+his inspiration.}
+
+
+\section{Nuweb}
+
+Nuweb works with any programming language and \LaTeX~\cite{Lamport:LDP85}. I
+wanted to use \LaTeX\ because it supports a multi-level sectioning
+scheme and has facilities for drawing figures. I wanted to be able to
+work with arbitrary programming languages because my friends and I
+write programs in many languages (and sometimes combinations of
+several languages), {\em e.g.,} C, Fortran, C++, yacc, lex, Scheme,
+assembly, Postscript, and so forth. The need to support arbitrary
+programming languages has many consequences:
+\begin{description}
+\item[No prettyprinting] Both \verb|WEB| and \verb|CWEB| are able to
+  prettyprint the code sections of their documents because they
+  understand the language well enough to parse it. Since we want to use
+  {\em any\/} language, we've got to abandon this feature.
+  However, we do allow particular individual formulas or fragments
+  of \LaTeX\ code to be formatted and still be parts of output files.
+  Also, keywords in scraps can be surrounded by \verb|@_| to
+  have them be bold in the output.
+\item[No index of identifiers] Because \verb|WEB| knows about Pascal,
+  it is able to construct an index of all the identifiers occurring in
+  the code sections (filtering out keywords and the standard type
+  identifiers). Unfortunately, this isn't as easy in our case. We don't
+  know what an identifier looks like in each language and we certainly
+  don't know all the keywords. (On the other hand, see the end of
+  Section~\ref{minorcommands})
+\end{description}
+Of course, we've got to have some compensation for our losses or the
+whole idea would be a waste. Here are the advantages I can see:
+\begin{description}
+\item[Simplicity] The majority of the commands in \verb|WEB| are
+  concerned with control of the automatic prettyprinting. Since we
+  don't prettyprint, many commands are eliminated. A further set of
+  commands is subsumed by \LaTeX\  and may also be eliminated. As a
+  result, our set of commands is reduced to only four members (explained
+  in the next section). This simplicity is also reflected in
+  the size of this tool, which is quite a bit smaller than the tools
+  used with other approaches.
+\item[No prettyprinting] Everyone disagrees about how their code
+  should look, so automatic formatting annoys many people. One approach
+  is to provide ways to control the formatting. Our approach is
+  simpler---we perform no automatic formatting and therefore allow the
+  programmer complete control of code layout.
+  We do allow individual scraps to be presented in either verbatim,
+  math, or paragraph mode in the \TeX\ output.
+\item[Control] We also offer the programmer complete control of the
+  layout of his output files (the files generated during tangling). Of
+  course, this is essential for languages that are sensitive to layout;
+  but it is also important in many practical situations, {\em e.g.,}
+  debugging.
+\item[Speed] Since nuweb doesn't do too much, the nuweb tool runs
+  quickly. I combine the functions of \verb|tangle| and \verb|weave| into
+  a single program that performs both functions at once.
+\item[Page numbers] Inspired by the example of noweb, nuweb refers to
+  all scraps by page number to simplify navigation. If there are
+  multiple scraps on a page (say, page~17), they are distinguished by
+  lower-case letters ({\em e.g.,} 17a, 17b, and so forth).
+\item[Multiple file output] The programmer may specify more than one
+  output file in a single nuweb file. This is required when constructing
+  programs in a combination of languages (say, Fortran and C)\@. It's also
+  an advantage when constructing very large programs that would require
+  a lot of compile time.
+\end{description}
+This last point is very important. By allowing the creation of
+multiple output files, we avoid the need for monolithic programs.
+Thus we support the creation of very large programs by groups of
+people.
+
+A further reduction in compilation time is achieved by first
+writing each output file to a temporary location, then comparing the
+temporary file with the old version of the file. If there is no
+difference, the temporary file can be deleted. If the files differ,
+the old version is deleted and the temporary file renamed. This
+approach works well in combination with \verb|make| (or similar tools),
+since \verb|make| will avoid recompiling untouched output files.
+
+\subsection{Nuweb and HTML}
+
+In addition to producing {\LaTeX} source, nuweb can be used to
+generate HyperText Markup Language (HTML), the markup language used by
+the World Wide Web.  HTML provides hypertext links.  When an HTML
+document is viewed online, a user can navigate within the document by
+activating the links.  The tools which generate HTML automatically
+produce hypertext links from a nuweb source.
+
+(Note that hyperlinks can be included in \LaTeX\ using the
+\verb|hyperref| package. This is now the preferred way of doing
+this and the HTML processing is not up to date.)
+
+\section{Writing Nuweb}
+
+The bulk of a nuweb file will be ordinary \LaTeX\@. In fact, any
+{\LaTeX} file can serve as input to nuweb and will be simply copied
+through, unchanged, to the documentation file---unless a nuweb command
+is discovered. All nuweb commands begin with an ``at-sign''
+(\verb|@|).  Therefore, a file without at-signs will be copied
+unchanged.  Nuweb commands are used to specify {\em output files,}
+define {\em fragments,} and delimit {\em scraps}. These are the basic
+features of interest to the nuweb tool---all else is simply text to be
+copied to the documentation file.
+
+\subsection{The Major Commands}
+
+Files and fragments are defined with the following commands:
+\begin{description}
+\item[{\tt @o} {\em file-name flags scrap\/}] Output a file. The file
+  name is terminated by whitespace.
+\item[{\tt @d} {\em fragment-name scrap\/}] Define a fragment. The
+  fragment name is terminated by a return or the beginning of a scrap.
+\item[{\tt @q} {\em fragment-name scrap\/}] Define a fragment. The
+  fragment name is terminated by a return or the beginning of a scrap.
+  This a quoted fragment.
+\end{description}
+A specific file may be specified several times, with each definition
+being written out, one after the other, in the order they appear.
+The definitions of fragments may be similarly specified piecemeal.
+
+A fragment name may have embedded parameters. The parameters are
+denoted by the sequence \texttt{@'value@'} where \texttt{value} is
+an uninterpreted string of characters (although the sequence
+\texttt{@@} denotes a single \texttt{@} character). When a fragment
+name is used inside a scrap the parameters may be replaced by an
+argument which may be a different literal string, a fragment use, an
+embedded fragment or by a parameter use.
+
+The difference between a quoted fragment (\texttt{@q}) and an
+ordinary one (\texttt{@d}) is that inside a quoted fragment fragments
+are not expanded on output. Rather, they are formatted as uses of
+fragments so that the output file can itself be \texttt{nuweb}
+source. This allows you to create files containing fragments which can
+undergo further processing before the fragments are expanded, while
+also describing and documenting them in one place.
+
+You can have both quoted and unquoted fragments with the same
+name. They are written out in order as usual, with those introduced by
+\texttt{@q} being quoted and those with \texttt{@d} expanded as
+normal.
+
+In quoted fragments, the \texttt{@f} filename is quoted as well, so that
+when it is expanded it refers to the finally produced file, not
+any of the intermediate ones.
+
+\subsubsection{Scraps}
+
+Scraps have specific begin markers and end markers to allow precise
+control over the contents and layout. Note that any amount of
+whitespace (including carriage returns) may appear between a name and
+the beginning of a scrap. Scraps may also appear in the running text
+where they are formatted (almost) identically to their use in definitions,
+but don't appear in any code output.
+\begin{description}
+\item[\tt @\{{\em anything\/}@\}] where the scrap body includes every
+  character in {\em anything\/}---all the blanks, all the tabs, all the
+  carriage returns.  This scrap will be typeset in verbatim mode. Using
+  the \texttt{-l} option will cause the program to typeset the scrap with
+  the help of \LaTeX's \texttt{listings} package.
+\item[\tt @[{\em anything\/}@]] where the scrap body includes every
+  character in {\em anything\/}---all the blanks, all the tabs, all the
+  carriage returns.  This scrap will be typeset in paragraph mode, allowing
+  sections of \TeX\ documents to be scraps, but still  be prettyprinted
+  in the document.
+\item[\tt @({\em anything\/}@)] where the scrap body includes every
+  character in {\em anything\/}---all the blanks, all the tabs, all the
+  carriage returns.  This scrap will be typeset in math mode.  This allows
+  this scrap to contain a formula which will be typeset nicely.
+\end{description}
+Inside a scrap, we may invoke a fragment.
+\begin{description}
+\item[\tt @<{\em fragment-name\/}@>]
+  This is a fragment use. It causes the fragment
+  {\em fragment-name\/} to be expanded inline as the code is written out
+  to a file. It is an error to specify recursive fragment invocations.
+\item[\tt @<{\em fragment-name\/}@( {\em a1} @, {\em a2} @) @>] This
+  is the old form of parameterising a fragment. It causes the fragment
+  {\em fragment-name\/} to be expanded inline with the arguments {\em a1},
+    {\em a2}, etc. Up to 9 arguments may be given.
+\item[\tt @1, @2, ..., @9] In a fragment causes the n'th fragment
+      argument to be substituted into the scrap.  If the argument
+      is not passed, a null string is substituted.
+      Arguments can be passed in two ways, either embedded in the
+      fragment
+      name or as the old form given above.
+
+      An embedded argument may specified in four ways.
+      \begin{description}
+      \item[\tt @'string@']
+      The string will be copied literally into the called fragment.
+      It will not be interpreted (except for \texttt{@@} converted
+            to \texttt{@}).
+      \item[\tt @<{\em fragment-name\/}@>]
+      The fragment will be expanded in the usual fashion and the results
+      passed to the called fragment.
+      \item[\tt @\{text@\}]
+      The text will be expanded as normal and the results passed to
+      the called fragment. This behaves like an anonymous fragment which has
+      the same arguments as the calling fragment. Its principle use is
+      to combine text and arguments into one argument.
+      \item[\tt @1, @2, ..., @9]
+      The argument of the calling fragment will be passed to the called
+      fragment and expanded in there.
+      \end{description}
+
+      If an argument is used but there is no corresponding parameter
+      in the fragment name, the null string is substituted. But what
+      happens if there is a parameter in the full name of a fragment,
+      but a particular application of the fragment is abbreviated
+      (using the \verb|. . .| notation) and the argument is missed? In
+      that case the argument is replaced by the string given in the
+      definition of the fragment.
+
+      In the old form the parameter may contain any text and will be
+      expanded as a normal scrap. The two forms of parameter passing
+      don't play nicely together. If a scrap passes both embedded and
+      old form arguments the old form arguments are ignored.
+\item[\tt @x{\em label}@x] Marks a place inside a scrap and
+associates it to the label (which can be any text not containing
+a @). Expands to the reference number of the scrap followed by a
+numeric value. Outside scraps it expands to the same value. It is
+used so that text outside scraps can refer to particular places
+within scraps.
+\item[\tt @f] Inside a scrap this is replaced by the name of the
+current output file.
+\item[\tt @t] Inside a scrap this is replaced by the title of the
+fragment as it is at the point it is used, with all parameters
+replaced by actual arguments.
+\item[\tt @\#] At the beginning of a line in a scrap this will
+suppress the normal indentation for that line. Use this, for
+example, when you have a \verb|#ifdef| inside a nested scrap.
+Writing \verb|@##ifdef| will cause it to be lined up on the left
+rather than indented with the rest of its code.
+\item[\tt @s] Inside a scrap supresses indentation for the following
+fragment expansion.
+\end{description}
+Note that fragment names may be abbreviated, either during invocation or
+definition. For example, it would be very tedious to have to
+type, repeatedly, the fragment name
+\begin{quote}
+\verb|@d Check for terminating at-sequence and return name if found|
+\end{quote}
+Therefore, we provide a mechanism (stolen from Knuth) of indicating
+abbreviated names.
+\begin{quote}
+\verb|@d Check for terminating...|
+\end{quote}
+Basically, the programmer need only type enough characters to
+identify the fragment name uniquely, followed by three periods. An abbreviation
+may even occur before the full version; nuweb simply preserves the
+longest version of a fragment name. Note also that blanks and tabs are
+insignificant within a fragment name; each string of them is replaced by a
+single blank.
+
+Sometimes, for instance during program testing, it is convenient to comment
+out a few lines of code. In C or Fortran placing \verb|/* ... */| around the relevant
+code is not a robust solution, as the code itself may contain
+comments. Nuweb provides the command
+\begin{quote}
+\verb|@%|
+\end{quote}only to be used inside scraps. It behaves exactly the same
+as \verb|%| in the normal {\LaTeX} text body.
+
+When scraps are written to a program file or a documentation file, tabs are
+expanded into spaces by default. Currently, I assume tab stops are set
+every eight characters. Furthermore, when a fragment is expanded in a scrap,
+the body of the fragment is indented to match the indentation of the
+fragment invocation. Therefore, care must be taken with languages
+({\em e.g.,} Fortran) that are sensitive to indentation.
+These default behaviors may be changed for each output file (see
+below).
+
+\subsubsection{Flags}
+
+When defining an output file, the programmer has the option of using
+flags to control output of a particular file. The flags are intended
+to make life a little easier for programmers using certain languages.
+They introduce little language dependences; however, they do so only
+for a particular file. Thus it is still easy to mix languages within a
+single document. There are four ``per-file'' flags:
+\begin{description}
+\item[\tt -d] Forces the creation of \verb|#line| directives in the
+  output file. These are useful with C (and sometimes C++ and Fortran) on
+  many Unix systems since they cause the compiler's error messages to
+  refer to the web file rather than to the output file. Similarly, they
+  allow source debugging in terms of the web file.
+\item[\tt -i] Suppresses the indentation of fragments. That is, when a
+  fragment is expanded within a scrap, it will {\em not\/} be indented to
+  match the indentation of the fragment invocation. This flag would seem
+  most useful for Fortran programmers.
+\item[\tt -t] Suppresses expansion of tabs in the output file. This
+  feature seems important when generating \verb|make| files.
+\item[\tt -c{\it x}] Puts comments in generated code documenting the
+fragment that generated that code. The {\it x} selects the comment style
+for the language in use. So far the only valid values are \verb|c| to get
+\verb|C| comment style, \verb|+| for \verb|C++| and \verb|p| for
+\verb|Perl|. (\verb|Perl| commenting can be used for several languages
+including \verb|sh| and, mostly, \verb|tcl|.)
+If the global \verb|-x| cross-reference flag is
+set the comment includes the page reference for the first scrap that
+generated the code.
+\end{description}
+
+
+\subsection{The Minor Commands\label{minorcommands}}
+
+We have some very low-level utility commands that may appear anywhere
+in the web file.
+\begin{description}
+\item[\tt @@] Causes a single ``at sign'' to be copied into the output.
+\item[\tt @\_] Causes the text between it and the next {\tt @\_}
+      to be made bold (for keywords, etc.)
+\item[\tt @i {\em file-name\/}] Includes a file. Includes may be
+  nested, though there is currently a limit of 10~levels. The file name
+  should be complete (no extension will be appended) and should be
+  terminated by a carriage return. Normally the current directory is
+  searched for the file to be included, but this can be varied using
+  the \verb|-I| flag on the command line. Each such flag adds one
+  directory tothe search path and they are searched in the order
+  given.
+\item[{\tt @r}$x$] Changes the escape character `@' to `$x$'.
+  This must appear before any scrap definitions.
+\item[\tt @v] Always replaced by the string established by
+the \texttt{-V} flag, or a default string if the flag isn't
+given. This is intended to mark versions of the generated
+files.
+\end{description}
+
+In the text of the document, that is outside scraps, you may include
+scrap-like material.
+
+\begin{description}
+\item[\tt @\{\textit{Anything}@\}]
+The included material, the \textit{Anything},
+is typeset as if it appeared inside a scrap. This is useful for
+referring to fragments in the text and for
+describing the literate programming process itself.
+\item[\tt @<\textit{Fragment name}@>]
+The fragment named is expanded in place in the text. 
+The expansion is presented verbatim, it is not interpretted for
+typesetting, so any special environment must be set up before and
+after this is used.
+\end{description}
+
+Finally, there are three commands used to create indices to the
+fragment
+names, file definitions, and user-specified identifiers.
+\begin{description}
+\item[\tt @f] Create an index of file names.
+\item[\tt @m] Create an index of fragment names.
+\item[\tt @u] Create an index of user-specified identifiers.
+\end{description}
+I usually put these in their own section
+in the \LaTeX\ document; for example, see Chapter~\ref{indices}.
+
+Identifiers must be explicitly specified for inclusion in the
+\verb|@u| index. By convention, each identifier is marked at the
+point of its definition; all references to each identifier (inside
+scraps) will be discovered automatically. To ``mark'' an identifier
+for inclusion in the index, we must mention it at the end of a scrap.
+For example,
+\begin{quote}
+\begin{verbatim}
+@d a scrap @{
+Let's pretend we're declaring the variables FOO and BAR
+inside this scrap.
+@| FOO BAR @}
+\end{verbatim}
+\end{quote}
+I've used alphabetic identifiers in this example, but any string of
+characters (not including whitespace or \verb|@| characters) will do.
+Therefore, it's possible to add index entries for things like
+\verb|<<=| if desired. An identifier may be declared in more than one
+scrap.
+
+In the generated index, each identifier appears with a list of all the
+scraps using and defining it, where the defining scraps are
+distinguished by underlining. Note that the identifier doesn't
+actually have to appear in the defining scrap; it just has to be in
+the list of definitions at the end of a scrap.
+
+\section{Sectioning commands}
+For larger documents the indexes and usage lists get rather
+unwieldy and problems arise in naming things so that different
+things in different parts of the document don't get confused. We
+have a sectioning command which keeps the fragment names and user
+identifiers separate. Thus, you can give a fragment in one section
+the same name as a fragment in another and the two won't be confused
+or connected in any way. Nor will user identifiers
+defined in one section be referenced in another. Except for the
+fact that scraps in successive sections can go into the same
+output file, this is the same as if the sections came from
+separate input files.
+
+However, occasionally you may really want fragments from one section
+to be used in another. More often, you will want to identify a
+user identifier in one section with the same identifier in
+another (as, for example, a header file defined in one section is
+included in code in another). Extra commands allow a fragment
+defined in one section to be accessible from all other sections.
+Similarly, you can have scraps which define user identifiers and
+export them so that they can be used in other sections.
+
+\begin{description}
+\item[{\tt @s}] Start a new section.
+\item[{\tt @S}] Close the current section and don't start another.
+\item[{\tt @d+} fragment-name scrap] Define a fragment which is
+accessible in all sections, a global fragment.
+\item[{\tt @D+}] Likewise
+\item[{\tt @q+}] Likewise
+\item[{\tt @Q+}] Likewise
+\item[{\tt @m+}] Create an index of all such fragments.
+\item[{\tt @u+}] Create an index of globally accessible
+user identifiers.
+\end{description}
+
+There are two kinds of section, the base section which is where
+normally everything goes, and local sections which are introduced with
+the {\tt @s} command. A local section comprises everything from the
+command which starts it to the one which ends it. A {\tt @s} command
+will start a new local section. A {\tt @S} command closes the current
+local section, but doesn't open another, so what follows goes into the
+base section. Note that fragments defined in the base section aren't
+global; they are accessible only in the base section, but they are
+accessible regardless of any local sections between their definition
+and their use.
+
+Within a scrap:
+\begin{description}
+\item[\tt @<+{\em fragment-name\/}@>]
+Expand the globally accessible fragment with that name, rather than
+any local fragment.
+\item[{\tt @+}] Like \verb"@|" except that the identifiers
+defined are exported to the global realm and are not directly
+referenced in any scrap in any section (not even the one where
+they are defined).
+\item[{\tt @-}] Like \verb"@|" except that the identifiers
+are imported to the local realm. The cross-references show where
+the global variables are defined and defines the same names as
+locally accesible. Uses of the names within the section will
+point to this scrap.
+\end{description}
+
+Note that the \verb"+" signs above are part of the commands. They
+are not part of the fragment names. If you want a fragment whose name
+begins with a plus sign, leave a space between the command and the
+name.
+
+\section{Running Nuweb}
+
+Nuweb is invoked using the following command:
+\begin{quote}
+{\tt nuweb} {\em flags file-name}\ldots
+\end{quote}
+One or more files may be processed at a time. If a file name has no
+extension, \verb|.w| will be appended.  {\LaTeX} suitable for
+translation into HTML by {\LaTeX}2HTML will be produced from
+files whose name ends with \verb|.hw|, otherwise, ordinary {\LaTeX} will be
+produced.  While a file name may specify a file in another directory,
+the resulting documentation file will always be created in the current
+directory. For example,
+\begin{quote}
+{\tt nuweb /foo/bar/quux}
+\end{quote}
+will take as input the file \verb|/foo/bar/quux.w| and will create the
+file \verb|quux.tex| in the current directory.
+
+By default, nuweb performs both tangling and weaving at the same time.
+Normally, this is not a bottleneck in the compilation process;
+however, it's possible to achieve slightly faster throughput by
+avoiding one or another of the default functions using command-line
+flags. There are currently three possible flags:
+\begin{description}
+\item[\tt -t] Suppress generation of the documentation file.
+\item[\tt -o] Suppress generation of the output files.
+\item[\tt -c] Avoid testing output files for change before updating them.
+\end{description}
+Thus, the command
+\begin{quote}
+\verb|nuweb -to /foo/bar/quux|
+\end{quote}
+would simply scan the input and produce no output at all.
+
+There are several additional command-line flags:
+\begin{description}
+\item[\tt -v] For ``verbose'', causes nuweb to write information about
+  its progress to \verb|stderr|.
+\item[\tt -n] Forces scraps to be numbered sequentially from~1
+  (instead of using page numbers). This form is perhaps more desirable
+  for small webs.
+\item[\tt -s] Doesn't print list of scraps making up each file
+  following each scrap.
+\item[\tt -d] Print ``dangling'' identifiers -- user identifiers which
+  are never referenced, in indices, etc.
+\item[\tt -p {\it path}] Prepend \textit{path} to the filenames for
+all the output files.
+\item[\tt -l] \label{sec:pretty-print} Use the \texttt{listings}
+package for formatting scraps. Use this if you want to have a
+pretty-printer for your scraps. In order to e.g. have pretty Perl
+scraps, include the following \LaTeX\ commands in your document:
+\lstset{language=[LaTeX]TeX}
+
+\begin{lstlisting}{language={[LaTeX]TeX}}
+\usepackage{listings}
+...
+\lstset{extendedchars=true,keepspaces=true,language=perl}
+\end{lstlisting}
+
+See the \texttt{listings} documentation for a list of formatting
+options. Be sure to include a \texttt{\char92
+usepackage\{listings\}}
+in your document.
+
+\item[\tt -V \it string] Provide \textit{string} as the
+replacement for the @v operation.
+\end{description}
+
+\section{Generating HTML}
+
+Nikos Drakos' {\LaTeX}2HTML Version 0.5.3~\cite{drakos:94} can be used
+to translate {\LaTeX} with embedded HTML scraps into HTML\@.  Be sure
+to include the document-style option \verb|html| so that {\LaTeX} will
+understand the hypertext commands.  When translating into HTML, do not
+allow a document to be split by specifying ``\verb|-split 0|''.
+You need not generate navigation links, so also specify
+``\verb|-no_navigation|''.
+
+While preparing a web, you may want to view the program's scraps without
+taking the time to run {\LaTeX}2HTML\@.  Simply rename the generated
+{\LaTeX} source so that its file name ends with \verb|.html|, and view
+that file.  The documentations section will be jumbled, but the
+scraps will be clear.
+
+(Note that the HTML generation is not currently maintained. If the
+only reason you want HTML is ti get hyperlinks, use the {\LaTeX}
+\verb|hyperref| package and produce your document as PDF via
+\verb|pdflatex|.)
+
+\section{Restrictions}
+
+Because nuweb is intended to be a simple tool, I've established a few
+restrictions. Over time, some of these may be eliminated; others seem
+fundamental.
+\begin{itemize}
+\item The handling of errors is not completely ideal. In some cases, I
+  simply warn of a problem and continue; in other cases I halt
+  immediately. This behavior should be regularized.
+\item I warn about references to fragments that haven't been defined, but
+  don't halt. The name of the fragment is included in the output file
+  surrounded by \verb|<>| signs.
+  This seems most convenient for development, but may change
+  in the future.
+\item File names and index entries should not contain any \verb|@|
+  signs.
+\item Fragment names may be (almost) any well-formed \TeX\ string.
+  It makes sense to change fonts or use math mode; however, care should
+  be taken to ensure matching braces, brackets, and dollar signs.
+  When producing HTML, fragments are displayed in a preformatted element
+  (PRE), so fragments may contain one or more A, B, I, U, or P elements
+  or data characters.
+\item Anything is allowed in the body of a scrap; however, very
+  long scraps (horizontally or vertically) may not typeset well.
+\item Temporary files (created for comparison to the eventual
+  output files) are placed in the current directory. Since they may be
+  renamed to an output file name, all the output files should be on the
+  same file system as the current directory. Alternatively, you can
+  use the \verb|-p| flag to specify where the files go.
+\item Because page numbers cannot be determined until the document has
+  been typeset, we have to rerun nuweb after \LaTeX\ to obtain a clean
+  version of the document (very similar to the way we sometimes have
+  to rerun \LaTeX\ to obtain an up-to-date table of contents after
+  significant edits).  Nuweb will warn (in most cases) when this needs
+  to be done; in the remaining cases, \LaTeX\ will warn that labels
+  may have changed.
+\end{itemize}
+Very long scraps may be allowed to break across a page if declared
+with \verb|@O| or \verb|@D| (instead of \verb|@o| and \verb|@d|).
+This doesn't work very well as a default, since far too many short
+scraps will be broken across pages; however, as a user-controlled
+option, it seems very useful.  No distinction is made between the
+upper case and lower case forms of these commands when generating
+HTML\@.
+
+\section{Acknowledgements}
+
+Several people have contributed their times, ideas, and debugging
+skills. In particular, I'd like to acknowledge the contributions of
+Osman Buyukisik, Manuel Carriba, Adrian Clarke, Tim Harvey, Michael
+Lewis, Walter Ravenek, Rob Shillingsburg, Kayvan Sylvan, Dominique
+de~Waleffe, and Scott Warren.  Of course, most of these people would
+never have heard or nuweb (or many other tools) without the efforts of
+George Greenwade.
+
+Since maintenance has been taken over by Marc Mengel, Simon Wright and
+Keith Harwood online contributions have been made by:
+\begin{itemize}
+\item Walter Brown \verb|<wb@fnal.gov>|
+\item Nicky van Foreest \verb|<n.d.vanforeest@math.utwente.nl>|
+\item Javier Goizueta \verb|<jgoizueta@jazzfree.com>|
+\item Alan Karp \verb|<karp@hp.com>|
+\end{itemize}
+
+
+\bibliographystyle{amsplain}
+\bibliography{litprog,master,misc}
+
+\end{document}
