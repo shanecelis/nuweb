@@ -1,0 +1,5 @@
+* DONE Add a helloworld example
+* TODO Make key bindings configurable for nuweb.el
+* TODO Add a template for a project
+* TODO It would be nice to be able to use a dark color scheme for code
+  It has weird graphical artifacts currently.
