@@ -20,6 +20,8 @@ STYS = bibnames.sty html.sty
 DIST = Makefile README nuweb.w nuwebsty.w test htdocs nuweb.el \
 	$(TARGET)doc.tex $(SRCS) $(HDRS) $(BIBS) $(STYS)
 
+PREFIX = /usr/local
+
 %.tex: %.w
 	nuweb -r $<
 
@@ -38,6 +40,8 @@ DIST = Makefile README nuweb.w nuwebsty.w test htdocs nuweb.el \
 all:
 	$(MAKE) $(TARGET).tex
 	$(MAKE) $(TARGET)
+
+doc: $(TARGET).pdf
 
 tar: $(TARGET)doc.tex
 	mkdir $(TARGET)-$(VERSION)
@@ -84,3 +88,7 @@ $(OBJS): global.h
 
 $(TARGET): $(OBJS)
 	$(CC) -o $(TARGET) $(OBJS)
+
+install: nuweb nuweb.1
+	install -m 0755 nuweb $(PREFIX)/bin
+	install -m 0644 nuweb.1 $(PREFIX)/share/man/man1/nuweb.1

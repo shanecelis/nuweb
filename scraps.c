@@ -65,9 +65,9 @@ comment_ArglistElement(FILE * file, Arglist * args, int quote)
      fputc('>', file);
   }
 }
-char * comment_begin[4] = { "", "/* ", "// ", "# "};
-char * comment_mid[4] = { "", " * ", "// ", "# "};
-char * comment_end[4] = { "", " */", "", ""};
+char * comment_begin[5] = { "", "/* ", "// ", "# ", ";; "};
+char * comment_mid[5] = { "", " * ", "// ", "# ", ";; "};
+char * comment_end[5] = { "", " */", "", "", ""};
 
 static void add_uses();
 static int scrap_is_in();
@@ -322,7 +322,7 @@ int collect_scrap()
                                /* Get label from */
                                char  label_name[MAX_NAME_LEN];
                                char * p = label_name;
-                               while (c = source_get(), c != nw_char) /* Here is 148b-01 */
+                               while (c = source_get(), c != nw_char) /* Here is 149b-01 */
                                   *p++ = c;
                                *p = '\0';
                                c = source_get();
@@ -608,7 +608,12 @@ int write_scraps(file, spelling, defs, global_indent, indent_chars,
       reader.scrap = scrap_array(defs->scrap).slab;
       reader.index = 0;
       /* Insert debugging information if required */
-      if (debug_flag) {
+      if (debug_flag 
+        //&& 
+        //source_last != '['
+        //scrap_type != 1
+          //0
+      ) {
         fprintf(file, "\n#line %d \"%s\"\n",
                 line_number, scrap_array(defs->scrap).file_name);
         /* Insert appropriate indentation */
@@ -807,7 +812,7 @@ int write_scraps(file, spelling, defs, global_indent, indent_chars,
                                   /* Get label from */
                                   char  label_name[MAX_NAME_LEN];
                                   char * p = label_name;
-                                  while (c = pop(&reader), c != nw_char) /* Here is 148b-01 */
+                                  while (c = pop(&reader), c != nw_char) /* Here is 149b-01 */
                                      *p++ = c;
                                   *p = '\0';
                                   c = pop(&reader);
@@ -923,7 +928,12 @@ int write_scraps(file, spelling, defs, global_indent, indent_chars,
                                  }
                                }
                                /* Insert debugging information if required */
-                               if (debug_flag) {
+                               if (debug_flag 
+                                 //&& 
+                                 //source_last != '['
+                                 //scrap_type != 1
+                                   //0
+                               ) {
                                  fprintf(file, "\n#line %d \"%s\"\n",
                                          line_number, scrap_array(defs->scrap).file_name);
                                  /* Insert appropriate indentation */
@@ -1634,7 +1644,7 @@ static int reject_match(name, post, reader)
   if (sym_char(first) && sym_char(prev)) return TRUE;
   if (op_char(last) && op_char(post)) return TRUE;
   if (op_char(first) && op_char(prev)) return TRUE;
-  return FALSE; /* Here is 148a-01 */
+  return FALSE; /* Here is 149a-01 */
 }
 void
 write_label(char label_name[], FILE * file)

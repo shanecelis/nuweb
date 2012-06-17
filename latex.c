@@ -105,9 +105,15 @@ void write_tex(file_name, tex_name, sector)
                           /* Fill in the middle of the scrap environment */
                           {
                             fputs("\\vspace{-1ex}\n\\begin{list}{}{} \\item\n", tex_file);
+                            if (listings_flag) 
+                              fputs("\\begin{lstlisting}\n", tex_file);
                             extra_scraps = 0;
                             copy_scrap(tex_file, TRUE, name);
-                            fputs("{\\NWsep}\n\\end{list}\n", tex_file);
+                            if (listings_flag) 
+                              fputs("\\end{lstlisting}\n", tex_file);
+                            else 
+                              fputs("{\\NWsep}\n", tex_file);
+                            fputs("\\end{list}\n", tex_file);
                           }
                           /* Begin the cross-reference environment */
                           {
@@ -215,9 +221,15 @@ void write_tex(file_name, tex_name, sector)
                           /* Fill in the middle of the scrap environment */
                           {
                             fputs("\\vspace{-1ex}\n\\begin{list}{}{} \\item\n", tex_file);
+                            if (listings_flag) 
+                              fputs("\\begin{lstlisting}\n", tex_file);
                             extra_scraps = 0;
                             copy_scrap(tex_file, TRUE, name);
-                            fputs("{\\NWsep}\n\\end{list}\n", tex_file);
+                            if (listings_flag) 
+                              fputs("\\end{lstlisting}\n", tex_file);
+                            else 
+                              fputs("{\\NWsep}\n", tex_file);
+                            fputs("\\end{list}\n", tex_file);
                           }
                           /* Begin the cross-reference environment */
                           {
@@ -326,7 +338,7 @@ void write_tex(file_name, tex_name, sector)
                            /* Get label from */
                            char  label_name[MAX_NAME_LEN];
                            char * p = label_name;
-                           while (c = source_get(), c != nw_char) /* Here is 148b-01 */
+                           while (c = source_get(), c != nw_char) /* Here is 149b-01 */
                               *p++ = c;
                            *p = '\0';
                            c = source_get();
@@ -422,6 +434,8 @@ void write_tex(file_name, tex_name, sector)
 }
 static void write_arg(FILE * tex_file, char * p)
 {
+  if (listings_flag)
+    fputs("@", tex_file);
    fputs("\\hbox{\\slshape\\sffamily ", tex_file);
    while (*p)
    {
@@ -441,6 +455,9 @@ static void write_arg(FILE * tex_file, char * p)
    }
 
    fputs("\\/}", tex_file);
+  if (listings_flag)
+    fputs("@", tex_file);
+
 }
 static void print_scrap_numbers(tex_file, scraps)
      FILE *tex_file;
@@ -463,13 +480,15 @@ static void print_scrap_numbers(tex_file, scraps)
   }
   fputs(".\n", tex_file);
 }
-static char *orig_delimit_scrap[3][5] = {
+static char *orig_delimit_scrap[4][5] = {
   /* {} mode: begin, end, insert nw_char, prefix, suffix */
   { "\\verb@", "@", "@{\\tt @}\\verb@", "\\mbox{}", "\\\\" },
   /* [] mode: begin, end, insert nw_char, prefix, suffix */
   { "", "", "@", "", "" },
   /* () mode: begin, end, insert nw_char, prefix, suffix */
   { "$", "$", "@", "", "" },
+  /* {} mode using listings: begin, end, insert nw_char, prefix, suffix */
+  { "", "", "@", "", "" },
 };
 
 static char *delimit_scrap[3][5];
@@ -477,24 +496,10 @@ void initialise_delimit_scrap_array() {
   int i,j;
   for(i = 0; i < 3; i++) {
     for(j = 0; j < 5; j++) {
-      if((delimit_scrap[i][j] = strdup(orig_delimit_scrap[i][j])) == NULL) {
+      if((delimit_scrap[i][j] = strdup(orig_delimit_scrap[(i == 0 && listings_flag) ? 3 : i][j])) == NULL) {
         fprintf(stderr, "Not enough memory for string allocation\n");
         exit(EXIT_FAILURE);
       }
-    }
-  }
-
-  /* replace verb by lstinline */
-  if (listings_flag) {
-    free(delimit_scrap[0][0]);
-    if((delimit_scrap[0][0]=strdup("\\lstinline@")) == NULL) {
-      fprintf(stderr, "Not enough memory for string allocation\n");
-      exit(EXIT_FAILURE);
-    }
-    free(delimit_scrap[0][2]);
-    if((delimit_scrap[0][2]=strdup("@{\\tt @}\\lstinline@")) == NULL) {
-      fprintf(stderr, "Not enough memory for string allocation\n");
-      exit(EXIT_FAILURE);
     }
   }
 }
@@ -529,7 +534,8 @@ static void copy_scrap(file, prefix, name)
   while (1) {
     switch (c) {
       case '\n': fputs(delimit_scrap[scrap_type][1], file);
-                 if (prefix) fputs(delimit_scrap[scrap_type][4], file);
+                 //if (prefix) 
+                 fputs(delimit_scrap[scrap_type][4], file);
                  fputs("\n", file);
                  if (prefix) fputs(delimit_scrap[scrap_type][3], file);
                  fputs(delimit_scrap[scrap_type][0], file);
@@ -562,7 +568,7 @@ static void copy_scrap(file, prefix, name)
                               /* Get label from */
                               char  label_name[MAX_NAME_LEN];
                               char * p = label_name;
-                              while (c = source_get(), c != nw_char) /* Here is 148b-01 */
+                              while (c = source_get(), c != nw_char) /* Here is 149b-01 */
                                  *p++ = c;
                               *p = '\0';
                               c = source_get();
@@ -598,8 +604,11 @@ static void copy_scrap(file, prefix, name)
                              int narg = 0;
 
                              fputs(delimit_scrap[scrap_type][1],file);
-                             if (prefix)
+                             if (prefix) {
+                               if (listings_flag)
+                                 fputs("@", file);
                                fputs("\\hbox{", file);
+                             }
                              fputs("$\\langle\\,${\\itshape ", file);
                              while (*p != '\000') {
                                if (*p == ARG_CHR) {
@@ -667,8 +676,11 @@ static void copy_scrap(file, prefix, name)
                                        command_name, name->spelling);
                              }
                              fputs("}$\\,\\rangle$", file);
-                             if (prefix)
+                             if (prefix) {
                                 fputs("}", file);
+                               if (listings_flag)
+                                 fputs("@", file);
+                             }
                              fputs(delimit_scrap[scrap_type][0], file);
                            }
                            break;
@@ -693,13 +705,21 @@ static void copy_scrap(file, prefix, name)
                            break;
                  case 't': {
                              fputs(delimit_scrap[scrap_type][1],file);
+                             if (listings_flag)
+                               fputs("@", file);
                              fprintf(file, "\\hbox{\\sffamily\\slshape fragment title}");
+                             if (listings_flag)
+                               fputs("@", file);
                              fputs(delimit_scrap[scrap_type][0], file);
                            }
                            break;
                  case 'f': {
                              fputs(delimit_scrap[scrap_type][1],file);
+                             if (listings_flag)
+                               fputs("@", file);
                              fprintf(file, "\\hbox{\\sffamily\\slshape file name}");
+                             if (listings_flag)
+                               fputs("@", file);
                              fputs(delimit_scrap[scrap_type][0], file);
                            }
                            break;

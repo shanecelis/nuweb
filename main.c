@@ -46,7 +46,7 @@ int main(argc, argv)
                       break;
             default:  fprintf(stderr, "%s: unexpected argument ignored.  ",
                               command_name);
-                      fprintf(stderr, "Usage is: %s [-cdnostvx] "
+                      fprintf(stderr, "Usage: %s [-cdnostvx] "
                             "[-I path] [-V version] "
                             "[-h options] [-p path] file...\n",
                               command_name);
@@ -123,7 +123,7 @@ HasValue:;
   {
     if (arg >= argc) {
       fprintf(stderr, "%s: expected a file name.  ", command_name);
-      fprintf(stderr, "Usage is: %s [-cnotv] [-p path] file-name...\n", command_name);
+      fprintf(stderr, "Usage is: %s [-clnotv] [-p path] file-name...\n", command_name);
       exit(-1);
     }
     do {

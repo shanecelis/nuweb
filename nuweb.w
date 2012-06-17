@@ -491,14 +491,14 @@ single document. There are four ``per-file'' flags:
 \item[\tt -t] Suppresses expansion of tabs in the output file. This
   feature seems important when generating \verb|make| files.
 \item[\tt -c{\it x}] Puts comments in generated code documenting the
-fragment that generated that code. The {\it x} selects the comment style
-for the language in use. So far the only valid values are \verb|c| to get
-\verb|C| comment style, \verb|+| for \verb|C++| and \verb|p| for
-\verb|Perl|. (\verb|Perl| commenting can be used for several languages
-including \verb|sh| and, mostly, \verb|tcl|.)
-If the global \verb|-x| cross-reference flag is
-set the comment includes the page reference for the first scrap that
-generated the code.
+  fragment that generated that code. The {\it x} selects the comment
+  style for the language in use. So far the only valid values are
+  \verb|c| to get \verb|C| comment style (\verb|/* ... */|), \verb|+| for \verb|C++| (\verb|// ... |),
+  \verb|p| for \verb|Perl| (\verb|# ...|), \verb|l| for \verb|Lisp| comment
+  style (\verb|;; ...|). (\verb|Perl| commenting can be used for several languages
+  including \verb|sh| and, mostly, \verb|tcl|.)  If the global
+  \verb|-x| cross-reference flag is set the comment includes the page
+  reference for the first scrap that generated the code.
 \end{description}
 
 
@@ -703,7 +703,7 @@ scraps, include the following \LaTeX\ commands in your document:
 \begin{lstlisting}{language={[LaTeX]TeX}}
 \usepackage{listings}
 ...
-\lstset{extendedchars=true,keepspaces=true,language=perl}
+\lstset{extendedchars=true,keepspaces=true,language=perl,escapechar=\@@}
 \end{lstlisting}
 
 See the \texttt{listings} documentation for a list of formatting
@@ -1175,7 +1175,7 @@ and also avoids ambiguity about which value goes with which flag.
                 break;
       default:  fprintf(stderr, "%s: unexpected argument ignored.  ",
                         command_name);
-                fprintf(stderr, "Usage is: %s [-cdnostvx] "
+                fprintf(stderr, "Usage: %s [-cdnostvx] "
                       "[-I path] [-V version] "
                       "[-h options] [-p path] file...\n",
                         command_name);
@@ -1264,7 +1264,7 @@ the usage convention.
 @{{
   if (arg >= argc) {
     fprintf(stderr, "%s: expected a file name.  ", command_name);
-    fprintf(stderr, "Usage is: %s [-cnotv] [-p path] file-name...\n", command_name);
+    fprintf(stderr, "Usage is: %s [-clnotv] [-p path] file-name...\n", command_name);
     exit(-1);
   }
   do {
@@ -2322,6 +2322,8 @@ might want to use italics or bold face in the midst of the name.
 @o latex.c -cc
 @{static void write_arg(FILE * tex_file, char * p)
 {
+  if (listings_flag)
+    fputs("@@", tex_file);
    fputs("\\hbox{\\slshape\\sffamily ", tex_file);
    while (*p)
    {
@@ -2341,6 +2343,9 @@ might want to use italics or bold face in the midst of the name.
    }
 
    fputs("\\/}", tex_file);
+  if (listings_flag)
+    fputs("@@", tex_file);
+
 }
 @| write_arg @}
 
@@ -2388,9 +2393,15 @@ empirically; they may be adjusted to taste.
 @d Fill in the middle of the scrap environment
 @{{
   fputs("\\vspace{-1ex}\n\\begin{list}{}{} \\item\n", tex_file);
+  if (listings_flag) 
+    fputs("\\begin{lstlisting}\n", tex_file);
   extra_scraps = 0;
   copy_scrap(tex_file, TRUE, name);
-  fputs("{\\NWsep}\n\\end{list}\n", tex_file);
+  if (listings_flag) 
+    fputs("\\end{lstlisting}\n", tex_file);
+  else 
+    fputs("{\\NWsep}\n", tex_file);
+  fputs("\\end{list}\n", tex_file);
 }@}
 
 \newpage
@@ -2532,13 +2543,15 @@ might change the strings later when we encounter the command to change
 the `nuweb character'.
 
 @o latex.c
-@{static char *orig_delimit_scrap[3][5] = {
+@{static char *orig_delimit_scrap[4][5] = {
   /* {} mode: begin, end, insert nw_char, prefix, suffix */
   { "\\verb@@", "@@", "@@{\\tt @@}\\verb@@", "\\mbox{}", "\\\\" },
   /* [] mode: begin, end, insert nw_char, prefix, suffix */
   { "", "", "@@", "", "" },
   /* () mode: begin, end, insert nw_char, prefix, suffix */
   { "$", "$", "@@", "", "" },
+  /* {} mode using listings: begin, end, insert nw_char, prefix, suffix */
+  { "", "", "@@", "", "" },
 };
 
 static char *delimit_scrap[3][5];
@@ -2555,24 +2568,10 @@ command.
   int i,j;
   for(i = 0; i < 3; i++) {
     for(j = 0; j < 5; j++) {
-      if((delimit_scrap[i][j] = strdup(orig_delimit_scrap[i][j])) == NULL) {
+      if((delimit_scrap[i][j] = strdup(orig_delimit_scrap[(i == 0 && listings_flag) ? 3 : i][j])) == NULL) {
         fprintf(stderr, "Not enough memory for string allocation\n");
         exit(EXIT_FAILURE);
       }
-    }
-  }
-
-  /* replace verb by lstinline */
-  if (listings_flag) {
-    free(delimit_scrap[0][0]);
-    if((delimit_scrap[0][0]=strdup("\\lstinline@@")) == NULL) {
-      fprintf(stderr, "Not enough memory for string allocation\n");
-      exit(EXIT_FAILURE);
-    }
-    free(delimit_scrap[0][2]);
-    if((delimit_scrap[0][2]=strdup("@@{\\tt @@}\\lstinline@@")) == NULL) {
-      fprintf(stderr, "Not enough memory for string allocation\n");
-      exit(EXIT_FAILURE);
     }
   }
 }
@@ -2620,7 +2619,8 @@ command.
   while (1) {
     switch (c) {
       case '\n': fputs(delimit_scrap[scrap_type][1], file);
-                 if (prefix) fputs(delimit_scrap[scrap_type][4], file);
+                 //if (prefix) 
+                 fputs(delimit_scrap[scrap_type][4], file);
                  fputs("\n", file);
                  if (prefix) fputs(delimit_scrap[scrap_type][3], file);
                  fputs(delimit_scrap[scrap_type][0], file);
@@ -2796,7 +2796,11 @@ This scrap helps deal with bold keywords:
 @d Italic "@'whatever@'"
 @{{
   fputs(delimit_scrap[scrap_type][1],file);
+  if (listings_flag)
+    fputs("@@", file);
   fprintf(file, "\\hbox{\\sffamily\\slshape @1}");
+  if (listings_flag)
+    fputs("@@", file);
   fputs(delimit_scrap[scrap_type][0], file);
 }@}
 
@@ -2809,8 +2813,11 @@ This scrap helps deal with bold keywords:
   int narg = 0;
 
   fputs(delimit_scrap[scrap_type][1],file);
-  if (prefix)
+  if (prefix) {
+    if (listings_flag)
+      fputs("@@", file);
     fputs("\\hbox{", file);
+  }
   fputs("$\\langle\\,${\\itshape ", file);
   while (*p != '\000') {
     if (*p == ARG_CHR) {
@@ -2840,8 +2847,11 @@ This scrap helps deal with bold keywords:
             command_name, name->spelling);
   }
   fputs("}$\\,\\rangle$", file);
-  if (prefix)
+  if (prefix) {
      fputs("}", file);
+    if (listings_flag)
+      fputs("@@", file);
+  }
   fputs(delimit_scrap[scrap_type][0], file);
 }@}
 
@@ -4755,7 +4765,12 @@ We need to make sure that we don't overflow \verb|indent_chars[]|.
 
 
 @d Insert debugging information if required
-@{if (debug_flag) {
+@{if (debug_flag 
+  //&& 
+  //source_last != '['
+  //scrap_type != 1
+    //0
+) {
   fprintf(file, "\n#line %d \"%s\"\n",
           line_number, scrap_array(defs->scrap).file_name);
   @<Insert appropr...@>
@@ -5471,6 +5486,8 @@ else if (c == '+')
    new_name->comment_flag = 2;
 else if (c == 'p')
    new_name->comment_flag = 3;
+else if (c == 'l')
+   new_name->comment_flag = 4;
 else
    fprintf(stderr, "%s: Unrecognised comment flag (%s, %d)\n",
            command_name, source_name, source_line);
@@ -5478,9 +5495,9 @@ else
 
 
 @d Forward declarations for scraps.c
-@{char * comment_begin[4] = { "", "/* ", "// ", "# "};
-char * comment_mid[4] = { "", " * ", "// ", "# "};
-char * comment_end[4] = { "", " */", "", ""};
+@{char * comment_begin[5] = { "", "/* ", "// ", "# ", ";; "};
+char * comment_mid[5] = { "", " * ", "// ", "# ", ";; "};
+char * comment_end[5] = { "", " */", "", "", ""};
 @| comment_begin comment_end comment_mid @}
 
 Name terminated by \verb+\n+ or \verb+@@{+; but keep skipping until \verb+@@{+
@@ -6774,8 +6791,7 @@ supresses the indentation of fragments (useful for \fBFortran\fR).
 copy tabs untouched from input to output.
 .br
 \fB-c\fIx\fP Include comments in the output file.
-\fIx\fP may be \fBc\fP for C-style comments, \fB+\fP for C++ and
-\fBp\fP for perl and similar.
+\fIx\fP may be \fBc\fP for C-style comments, \fB+\fP for C++, \fBl\fP for Lisp style comments, and \fBp\fP for perl and similar.
 .PP
 .SH MINOR COMMANDS
 .br
@@ -6791,6 +6807,8 @@ copy tabs untouched from input to output.
 @@f     Creates an index of output files.
 .br
 @@m     Creates an index of fragments.
+.br
+@@l     Uses the listings package.
 .br
 @@u     Creates an index of user-specified identifiers.
 .PP

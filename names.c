@@ -264,6 +264,8 @@ Name *collect_file_name()
                          new_name->comment_flag = 2;
                       else if (c == 'p')
                          new_name->comment_flag = 3;
+                      else if (c == 'l')
+                         new_name->comment_flag = 4;
                       else
                          fprintf(stderr, "%s: Unrecognised comment flag (%s, %d)\n",
                                  command_name, source_name, source_line);
