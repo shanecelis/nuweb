@@ -45,7 +45,7 @@ int source_get()
                                  char name[FILENAME_MAX];
                                  char fullname[FILENAME_MAX];
                                  struct incl * p = include_list;
-
+                               
                                  if (include_depth >= 10) {
                                    fprintf(stderr, "%s: include nesting too deep (%s, %d)\n",
                                            command_name, source_name, source_line);

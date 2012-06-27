@@ -17,7 +17,7 @@ void pass1(file_name)
         /* Scan at-sequence */
         {
           char quoted = 0;
-
+        
           c = source_get();
           switch (c) {
             case 'r':
@@ -111,7 +111,7 @@ void pass1(file_name)
                          fprintf(stderr, "%s: unexpected EOF in text at (%s, %d)\n",
                                           command_name, source_name, source_line);
                          exit(-1);
-
+                      
                       skipped:  ;
                       }
                       
@@ -119,7 +119,7 @@ void pass1(file_name)
             case 'c': {
                          char * p = blockBuff;
                          char * e = blockBuff + (sizeof(blockBuff)/sizeof(blockBuff[0])) - 1;
-
+                      
                          /* Skip whitespace */
                          while (source_peek == ' '
                                 || source_peek == '\t'
@@ -130,18 +130,18 @@ void pass1(file_name)
                          {
                             /* Add one char to the block buffer */
                             int c = source_get();
-
+                            
                             if (c == nw_char)
                             {
                                /* Add an at character to the block or break */
                                int cc = source_peek;
-
+                               
                                if (cc == 'c')
                                {
                                   do
                                      c = source_get();
                                   while (c <= ' ');
-
+                               
                                   break;
                                }
                                else if (cc == 'd'
@@ -198,7 +198,7 @@ void pass1(file_name)
                          {
                             /* Skip to the next nw-char */
                             int c;
-
+                            
                             while ((c = source_get()), c != nw_char && c != EOF)/* Skip */
                             source_ungetc(&c);
                          }

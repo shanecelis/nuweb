@@ -12,7 +12,7 @@ void write_files(files)
       char indent_chars[MAX_INDENT];
       int temp_file_fd;
       FILE *temp_file;
-
+    
       /* Find a free temporary file */
       
       for( temp_name_count = 0; temp_name_count < 10000; temp_name_count++) {
@@ -39,7 +39,7 @@ void write_files(files)
         exit(-1);
       }
       
-
+    
       sprintf(real_name, "%s%s%s", dirpath, path_sep, files->spelling);
       if (verbose_flag)
         fprintf(stderr, "writing %s [%s]\n", files->spelling, temp_name);
@@ -47,7 +47,7 @@ void write_files(files)
                    files->debug_flag, files->tab_flag, files->indent_flag,
                    files->comment_flag, NULL, NULL, 0, files->spelling);
       fclose(temp_file);
-
+    
       /* Move the temporary file to the target, if required */
       
       if (compare_flag)

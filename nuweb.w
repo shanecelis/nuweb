@@ -702,6 +702,7 @@ scraps, include the following \LaTeX\ commands in your document:
 
 \begin{lstlisting}{language={[LaTeX]TeX}}
 \usepackage{listings}
+\newcommand{\atsymbol}{@@} 
 ...
 \lstset{extendedchars=true,keepspaces=true,language=perl,escapechar=\@@}
 \end{lstlisting}
@@ -2392,16 +2393,9 @@ empirically; they may be adjusted to taste.
 
 @d Fill in the middle of the scrap environment
 @{{
-  fputs("\\vspace{-1ex}\n\\begin{list}{}{} \\item\n", tex_file);
-  if (listings_flag) 
-    fputs("\\begin{lstlisting}\n", tex_file);
+  //fputs("\\vspace{1ex}\n", tex_file);
   extra_scraps = 0;
   copy_scrap(tex_file, TRUE, name);
-  if (listings_flag) 
-    fputs("\\end{lstlisting}\n", tex_file);
-  else 
-    fputs("{\\NWsep}\n", tex_file);
-  fputs("\\end{list}\n", tex_file);
 }@}
 
 \newpage
@@ -2543,19 +2537,26 @@ might change the strings later when we encounter the command to change
 the `nuweb character'.
 
 @o latex.c
-@{static char *orig_delimit_scrap[4][5] = {
-  /* {} mode: begin, end, insert nw_char, prefix, suffix */
-  { "\\verb@@", "@@", "@@{\\tt @@}\\verb@@", "\\mbox{}", "\\\\" },
-  /* [] mode: begin, end, insert nw_char, prefix, suffix */
-  { "", "", "@@", "", "" },
-  /* () mode: begin, end, insert nw_char, prefix, suffix */
-  { "$", "$", "@@", "", "" },
-  /* {} mode using listings: begin, end, insert nw_char, prefix, suffix */
-  { "", "", "@@", "", "" },
+@{static char *orig_delimit_scrap[4][DELIMIT_COUNT] = {
+  /* {} mode: begin, end, insert nw_char, line prefix, line suffix, body prefix, body suffix */
+  { "\\verb@@", "@@", "@@{\\tt @@}\\verb@@", "\\mbox{}", "\\\\", "\\vspace{-1ex}\n\\begin{list}{}{} \\item\n", "{\\NWsep}\n\\end{list}\n" },
+  /* [] mode: begin, end, insert nw_char, line prefix, line suffix */
+  { "", "", "@@", "", "", "\\vspace{-1ex}\n\\begin{list}{}{} \\item\n", "{\\NWsep}\n\\end{list}\n" },
+  /* () mode: begin, end, insert nw_char, line prefix, line suffix */
+  { "$", "$", "@@", "", "", "\\vspace{-1ex}\n\\begin{list}{}{} \\item\n", "{\\NWsep}\n\\end{list}\n" },
+  /* {} mode using listings: begin, end, insert nw_char, line prefix, line suffix */
+  { "", "", "@@{\\tt \\atsymbol}@@", "", "", "\\vspace{1ex}\n\\begin{lstlisting}\n", "\\end{lstlisting}" },
 };
 
-static char *delimit_scrap[3][5];
+static char *delimit_scrap[3][DELIMIT_COUNT];
 @}
+
+@d Type declarations @{@%
+#define DELIMIT_COUNT 7
+#define BODY_PREFIX 5
+#define BODY_SUFFIX 6
+@|@}
+
 
 The function \texttt{initialise\_delimit\_scrap\_array} does the
 copying. If we want to have the listings package \index{listings package}
@@ -2567,7 +2568,7 @@ command.
 @{void initialise_delimit_scrap_array() {
   int i,j;
   for(i = 0; i < 3; i++) {
-    for(j = 0; j < 5; j++) {
+    for(j = 0; j < DELIMIT_COUNT; j++) {
       if((delimit_scrap[i][j] = strdup(orig_delimit_scrap[(i == 0 && listings_flag) ? 3 : i][j])) == NULL) {
         fprintf(stderr, "Not enough memory for string allocation\n");
         exit(EXIT_FAILURE);
@@ -2614,15 +2615,18 @@ command.
   if (source_last == '[') scrap_type = 1;
   if (source_last == '(') scrap_type = 2;
   c = source_get();
-  if (prefix) fputs(delimit_scrap[scrap_type][3], file);
+  fputs(delimit_scrap[scrap_type][BODY_PREFIX], file);
+  if (prefix) 
+    fputs(delimit_scrap[scrap_type][3], file);
   fputs(delimit_scrap[scrap_type][0], file);
   while (1) {
     switch (c) {
       case '\n': fputs(delimit_scrap[scrap_type][1], file);
                  //if (prefix) 
-                 fputs(delimit_scrap[scrap_type][4], file);
+                 fputs(delimit_scrap[scrap_type][4], file); /* suffix */
                  fputs("\n", file);
-                 if (prefix) fputs(delimit_scrap[scrap_type][3], file);
+                 if (prefix) 
+                   fputs(delimit_scrap[scrap_type][3], file);
                  fputs(delimit_scrap[scrap_type][0], file);
                  indent = 0;
                  break;
@@ -2640,6 +2644,7 @@ command.
     }
     c = source_get();
   }
+  fputs(delimit_scrap[scrap_type][BODY_SUFFIX], file);
 }
 @| copy_scrap scrap_type @}
 
@@ -2711,7 +2716,8 @@ this function. It updates the scrap formatting directives accordingly.
     case ')':
     case ']':
     case '}': fputs(delimit_scrap[scrap_type][1], file);
-              return;
+              fputs(delimit_scrap[scrap_type][BODY_SUFFIX], file);
+              return; 
     case '<': @<Format macro name@>
               break;
     case '%': @<Skip commented-out code@>
@@ -4148,12 +4154,12 @@ file. If unsuccessful, it complains and halts. Otherwise, it sets
 @| source_open @}
 
 
-
+    
 
 \section{Scraps} \label{scraps}
 
 
-@o scraps.c -cc
+@o scraps.c -cc -d
 @{#define SLAB_SIZE 1024
 
 typedef struct slab {
@@ -4727,7 +4733,7 @@ a->next = next;@}
          } else {
            /* Don't show newlines in embedded fragmants */
            fputs(". . .", file);
-           return;
+           return indent + global_indent;
          }
       case '\t': @<Handle tab...@>
                  delayed_indent = 0;
@@ -4804,8 +4810,8 @@ are \verb|@@<|, we suppress the indent for now but mark that it
 may be needed when the next fragment is started.
 
 @d Indent suppressed
-@{c1 == '\n'
-|| c1 == nw_char && (c2 == '#' || (delayed_indent |= (c2 == '<')))@}
+@{(c1 == '\n'
+|| c1 == nw_char) && (c2 == '#' || (delayed_indent |= (c2 == '<')))@}
 
 @d Handle tab characters on output
 @{{
@@ -6113,7 +6119,7 @@ void search()
     q->next = depths[1];
     depths[1] = q;
   }
-  while (c = *p++) {
+  while ((c = *p++)) {
     Goto_Node *new = goto_lookup(c, q);
     if (!new) {
       Move_Node *new_move = (Move_Node *) arena_getmem(sizeof(Move_Node));
@@ -6285,6 +6291,7 @@ static int scrap_is_in(Scrap_Node * list, int i)
 static void add_uses(Uses * * root, Name *name)
 {
    int cmp;
+   int robs_strcmp(char *, char *);
    Uses *p, **q = root;
 
    while ((p = *q, p != NULL)
@@ -6708,17 +6715,24 @@ source for typeset documentation.
 .br
 \fB-s\fP Doesn't print list of scraps making up file at end of
   each scrap.
+.br
 \fB-p path\fP Prepend path to the filenames for all the output files.
+.br
 \fB-V string\fP Provide the string for replacement of the @@v
 operation. This is intended as a means for including version
 information in generated output.
+.br
 \fB-x\fP Include cross-references in comments in output files.
+.br
 \fB-h options\fP Turn on hyperlinks using the hyperref package of
 LaTeX and provide the options to the package.
+.br
 \fB-r\fP Turn on hyperlinks using the hyperref package of
 LaTeX, with the package options being in the text.
+.br
 \fB-I path\fP Provide a directory to search for included files. This
 may appear several times.
+.br
 
 .SH FORMAT OF NUWEB FILES
 A
@@ -6790,7 +6804,7 @@ supresses the indentation of fragments (useful for \fBFortran\fR).
 \fB-t\fP option makes \fInuweb\fP
 copy tabs untouched from input to output.
 .br
-\fB-c\fIx\fP Include comments in the output file.
+\fB-c\fP\fIx\fP Include comments in the output file.
 \fIx\fP may be \fBc\fP for C-style comments, \fB+\fP for C++, \fBl\fP for Lisp style comments, and \fBp\fP for perl and similar.
 .PP
 .SH MINOR COMMANDS

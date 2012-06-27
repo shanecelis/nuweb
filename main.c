@@ -91,7 +91,7 @@ HasValue:;
          struct incl * le
             = (struct incl *)arena_getmem(sizeof(struct incl));
          struct incl ** p = &include_list;
-
+      
          if (*s == '\0')
            s = argv[arg++];
          le->name = save_string(s);
@@ -111,7 +111,7 @@ HasValue:;
     /* try to get locale information */
     char *s=getenv("LC_CTYPE");
     if (s==NULL) s=getenv("LC_ALL");
-
+  
     /* set it */
     if (s!=NULL)
       if(setlocale(LC_CTYPE, s)==NULL)
@@ -155,7 +155,7 @@ HasValue:;
                 = (struct incl *)arena_getmem(sizeof(struct incl));
              struct incl ** p = &include_list;
              char sv = *trim;
-
+          
              *trim = '\0';
              le->name = save_string(source_name);
              le->next = NULL;

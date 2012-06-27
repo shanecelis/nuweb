@@ -16,6 +16,10 @@
 #define TRUE 1
 #endif
 
+#define DELIMIT_COUNT 7
+#define BODY_PREFIX 5
+#define BODY_SUFFIX 6
+
 #define MAX_INDENT 500
 typedef struct scrap_node {
   struct scrap_node *next;

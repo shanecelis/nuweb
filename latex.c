@@ -104,16 +104,9 @@ void write_tex(file_name, tex_name, sector)
                           fputs("}}$\\equiv$\n", tex_file);
                           /* Fill in the middle of the scrap environment */
                           {
-                            fputs("\\vspace{-1ex}\n\\begin{list}{}{} \\item\n", tex_file);
-                            if (listings_flag) 
-                              fputs("\\begin{lstlisting}\n", tex_file);
+                            //fputs("\\vspace{1ex}\n", tex_file);
                             extra_scraps = 0;
                             copy_scrap(tex_file, TRUE, name);
-                            if (listings_flag) 
-                              fputs("\\end{lstlisting}\n", tex_file);
-                            else 
-                              fputs("{\\NWsep}\n", tex_file);
-                            fputs("\\end{list}\n", tex_file);
                           }
                           /* Begin the cross-reference environment */
                           {
@@ -168,7 +161,7 @@ void write_tex(file_name, tex_name, sector)
               case 'q':
               case 'd': {
                           Name *name = collect_macro_name();
-
+                        
                           /* Begin the scrap environment */
                           {
                             if (big_definition)
@@ -205,7 +198,7 @@ void write_tex(file_name, tex_name, sector)
                           {
                             char * p = name->spelling;
                             int i = 0;
-
+                          
                             while (*p != '\000') {
                               if (*p == ARG_CHR) {
                                 write_arg(tex_file, name->arg[i++]);
@@ -220,16 +213,9 @@ void write_tex(file_name, tex_name, sector)
                           fputs("}}$\\,\\rangle\\equiv$\n", tex_file);
                           /* Fill in the middle of the scrap environment */
                           {
-                            fputs("\\vspace{-1ex}\n\\begin{list}{}{} \\item\n", tex_file);
-                            if (listings_flag) 
-                              fputs("\\begin{lstlisting}\n", tex_file);
+                            //fputs("\\vspace{1ex}\n", tex_file);
                             extra_scraps = 0;
                             copy_scrap(tex_file, TRUE, name);
-                            if (listings_flag) 
-                              fputs("\\end{lstlisting}\n", tex_file);
-                            else 
-                              fputs("{\\NWsep}\n", tex_file);
-                            fputs("\\end{list}\n", tex_file);
                           }
                           /* Begin the cross-reference environment */
                           {
@@ -338,7 +324,7 @@ void write_tex(file_name, tex_name, sector)
                            /* Get label from */
                            char  label_name[MAX_NAME_LEN];
                            char * p = label_name;
-                           while (c = source_get(), c != nw_char) /* Here is 149b-01 */
+                           while (c = source_get(), c != nw_char) /* Here is 149c-01 */
                               *p++ = c;
                            *p = '\0';
                            c = source_get();
@@ -480,22 +466,22 @@ static void print_scrap_numbers(tex_file, scraps)
   }
   fputs(".\n", tex_file);
 }
-static char *orig_delimit_scrap[4][5] = {
-  /* {} mode: begin, end, insert nw_char, prefix, suffix */
-  { "\\verb@", "@", "@{\\tt @}\\verb@", "\\mbox{}", "\\\\" },
-  /* [] mode: begin, end, insert nw_char, prefix, suffix */
-  { "", "", "@", "", "" },
-  /* () mode: begin, end, insert nw_char, prefix, suffix */
-  { "$", "$", "@", "", "" },
-  /* {} mode using listings: begin, end, insert nw_char, prefix, suffix */
-  { "", "", "@", "", "" },
+static char *orig_delimit_scrap[4][DELIMIT_COUNT] = {
+  /* {} mode: begin, end, insert nw_char, line prefix, line suffix, body prefix, body suffix */
+  { "\\verb@", "@", "@{\\tt @}\\verb@", "\\mbox{}", "\\\\", "\\vspace{-1ex}\n\\begin{list}{}{} \\item\n", "{\\NWsep}\n\\end{list}\n" },
+  /* [] mode: begin, end, insert nw_char, line prefix, line suffix */
+  { "", "", "@", "", "", "\\vspace{-1ex}\n\\begin{list}{}{} \\item\n", "{\\NWsep}\n\\end{list}\n" },
+  /* () mode: begin, end, insert nw_char, line prefix, line suffix */
+  { "$", "$", "@", "", "", "\\vspace{-1ex}\n\\begin{list}{}{} \\item\n", "{\\NWsep}\n\\end{list}\n" },
+  /* {} mode using listings: begin, end, insert nw_char, line prefix, line suffix */
+  { "", "", "@{\\tt \\atsymbol}@", "", "", "\\vspace{1ex}\n\\begin{lstlisting}\n", "\\end{lstlisting}" },
 };
 
-static char *delimit_scrap[3][5];
+static char *delimit_scrap[3][DELIMIT_COUNT];
 void initialise_delimit_scrap_array() {
   int i,j;
   for(i = 0; i < 3; i++) {
-    for(j = 0; j < 5; j++) {
+    for(j = 0; j < DELIMIT_COUNT; j++) {
       if((delimit_scrap[i][j] = strdup(orig_delimit_scrap[(i == 0 && listings_flag) ? 3 : i][j])) == NULL) {
         fprintf(stderr, "Not enough memory for string allocation\n");
         exit(EXIT_FAILURE);
@@ -529,15 +515,18 @@ static void copy_scrap(file, prefix, name)
   if (source_last == '[') scrap_type = 1;
   if (source_last == '(') scrap_type = 2;
   c = source_get();
-  if (prefix) fputs(delimit_scrap[scrap_type][3], file);
+  fputs(delimit_scrap[scrap_type][BODY_PREFIX], file);
+  if (prefix) 
+    fputs(delimit_scrap[scrap_type][3], file);
   fputs(delimit_scrap[scrap_type][0], file);
   while (1) {
     switch (c) {
       case '\n': fputs(delimit_scrap[scrap_type][1], file);
                  //if (prefix) 
-                 fputs(delimit_scrap[scrap_type][4], file);
+                 fputs(delimit_scrap[scrap_type][4], file); /* suffix */
                  fputs("\n", file);
-                 if (prefix) fputs(delimit_scrap[scrap_type][3], file);
+                 if (prefix) 
+                   fputs(delimit_scrap[scrap_type][3], file);
                  fputs(delimit_scrap[scrap_type][0], file);
                  indent = 0;
                  break;
@@ -568,7 +557,7 @@ static void copy_scrap(file, prefix, name)
                               /* Get label from */
                               char  label_name[MAX_NAME_LEN];
                               char * p = label_name;
-                              while (c = source_get(), c != nw_char) /* Here is 149b-01 */
+                              while (c = source_get(), c != nw_char) /* Here is 149c-01 */
                                  *p++ = c;
                               *p = '\0';
                               c = source_get();
@@ -595,14 +584,15 @@ static void copy_scrap(file, prefix, name)
                  case ')':
                  case ']':
                  case '}': fputs(delimit_scrap[scrap_type][1], file);
-                           return;
+                           fputs(delimit_scrap[scrap_type][BODY_SUFFIX], file);
+                           return; 
                  case '<': {
                              Arglist *args = collect_scrap_name(-1);
                              Name *name = args->name;
                              char * p = name->spelling;
                              Arglist *q = args->args;
                              int narg = 0;
-
+                           
                              fputs(delimit_scrap[scrap_type][1],file);
                              if (prefix) {
                                if (listings_flag)
@@ -630,21 +620,21 @@ static void copy_scrap(file, prefix, name)
                                /* Format macro parameters */
                                
                                   char sep;
-
+                               
                                   sep = '(';
                                   do {
                                     fputc(sep,file);
-
+                               
                                     fputs("{\\footnotesize ", file);
                                     write_single_scrap_ref(file, scraps + 1);
                                     fprintf(file, "\\label{scrap%d}\n", scraps + 1);
                                     fputs(" }", file);
-
+                               
                                     source_last = '{';
                                     copy_scrap(file, TRUE, NULL);
-
+                               
                                     ++scraps;
-
+                               
                                     sep = ',';
                                   } while ( source_last != ')' && source_last != EOF );
                                   fputs(" ) ",file);
@@ -755,6 +745,7 @@ static void copy_scrap(file, prefix, name)
     }
     c = source_get();
   }
+  fputs(delimit_scrap[scrap_type][BODY_SUFFIX], file);
 }
 void update_delimit_scrap()
 {
@@ -828,21 +819,21 @@ write_ArglistElement(FILE * file, Arglist * args, char ** params)
       /* Format macro parameters */
       
          char sep;
-
+      
          sep = '(';
          do {
            fputc(sep,file);
-
+      
            fputs("{\\footnotesize ", file);
            write_single_scrap_ref(file, scraps + 1);
            fprintf(file, "\\label{scrap%d}\n", scraps + 1);
            fputs(" }", file);
-
+      
            source_last = '{';
            copy_scrap(file, TRUE, NULL);
-
+      
            ++scraps;
-
+      
            sep = ',';
          } while ( source_last != ')' && source_last != EOF );
          fputs(" ) ",file);
@@ -933,11 +924,11 @@ static void format_entry(name, tex_file, sector)
   {
      int i = j - 1;
      Name * kj = nms[j];
-
+  
      do
      {
         Name * ki = nms[i];
-
+  
         if (robs_strcmp(ki->spelling, kj->spelling) < 0)
            break;
         nms[i + 1] = ki;
@@ -958,7 +949,7 @@ static void format_entry(name, tex_file, sector)
        {
          char * p = name->spelling;
          int i = 0;
-
+       
          while (*p != '\000') {
            if (*p == ARG_CHR) {
              write_arg(tex_file, name->arg[i++]);
@@ -1072,7 +1063,7 @@ static void format_user_entry(name, tex_file, sector)
           if (defs->scrap == uses->scrap)
             uses = uses->next;
           fputs("\\underline{", tex_file);
-
+    
           fputs("\\NWlink{nuweb", tex_file);
           write_single_scrap_ref(tex_file, defs->scrap);
           fputs("}{", tex_file);
@@ -1094,13 +1085,13 @@ static void format_user_entry(name, tex_file, sector)
             if (uses && defs->scrap == uses->scrap)
               uses = uses->next;
             fputs(", \\underline{", tex_file);
-
+    
             fputs("\\NWlink{nuweb", tex_file);
             write_single_scrap_ref(tex_file, defs->scrap);
             fputs("}{", tex_file);
             write_single_scrap_ref(tex_file, defs->scrap);
             fputs("}", tex_file);
-
+    
             putc('}', tex_file);
             page = -2;
             defs = defs->next;

@@ -465,16 +465,16 @@ Arglist * collect_scrap_name(int current_scrap)
              /* Look for end of scrap name and return */
              {
                Name * node;
-
+             
                c = source_get();
                switch (c) {
-
+             
                  case '\'': {
                        /* Add plain string argument */
                        char buff[MAX_NAME_LEN];
                        char * s = buff;
                        int c, c2;
-
+                       
                        while ((c = source_get()) != EOF) {
                          if (c==nw_char) {
                            c2 = source_get();
@@ -571,7 +571,7 @@ Arglist * collect_scrap_name(int current_scrap)
                        node = prefix_add(&macro_names, name, sector);
                      }
                      return buildArglist(node, head);
-
+             
                  default:
                     if (c==nw_char)
                       {

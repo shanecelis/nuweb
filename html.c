@@ -287,21 +287,21 @@ static void copy_scrap(file, prefix)
                              if (scrap_name_has_parameters) {
                                
                                   char sep;
-
+                               
                                   sep = '(';
                                   fputs("\\begin{rawhtml}", file);
                                   do {
-
+                               
                                     fputc(sep,file);
-
+                               
                                     fprintf(file, "%d <A NAME=\"#nuweb%d\"></A>", scraps, scraps);
-
+                               
                                     source_last = '{';
                                     copy_scrap(file, TRUE);
-
+                               
                                     ++scraps;
                                     sep = ',';
-
+                               
                                   } while ( source_last != ')' && source_last != EOF );
                                   fputs(" ) ",file);
                                   do
